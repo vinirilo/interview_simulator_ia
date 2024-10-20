@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+        }
+        .response {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .audio-player {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interview Simulator</h1>
+    <p>Click the microphone to ask an interview question using your voice:</p>
+
+    <button onclick="startRecognition()">🎤 Start Speaking</button><br><br>
+    <textarea id="question" rows="4" cols="50" placeholder="Your question will appear here..."></textarea><br><br>
+    <button onclick="askQuestion()">Ask Question</button>
+    
+    <div class="response" id="response"></div>
+    <div class="audio-player" id="user-audio-container" hidden>
+        <p><strong>Your Question:</strong></p>
+        <audio id="user-audio" controls></audio>
+    </div>
+    <div class="audio-player" id="gpt-audio-container" hidden>
+        <p><strong>GPT's Response:</strong></p>
+        <audio id="gpt-audio" controls></audio>
+    </div>
+
+    <script>
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+
+        function startRecognition() {
+            recognition.start();
+        }
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            document.getElementById('question').value = transcript;
+        };
+
+        function askQuestion() {
+            const question = document.getElementById('question').value;
+
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ question: question }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.response) {
+                    document.getElementById('response').innerText = data.response;
+
+                    const userAudioContainer = document.getElementById('user-audio-container');
+                    const gptAudioContainer = document.getElementById('gpt-audio-container');
+                    const userAudioElement = document.getElementById('user-audio');
+                    const gptAudioElement = document.getElementById('gpt-audio');
+
+                    if (data.user_audio_url) {
+                        userAudioElement.src = data.user_audio_url;
+                        userAudioContainer.hidden = false;
+                    }
+
+                    if (data.gpt_audio_url) {
+                        gptAudioElement.src = data.gpt_audio_url;
+                        gptAudioContainer.hidden = false;
+                    }
+                } else {
+                    document.getElementById('response').innerText = "Error: " + data.error;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
